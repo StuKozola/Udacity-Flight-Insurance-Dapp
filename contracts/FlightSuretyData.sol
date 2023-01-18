@@ -9,8 +9,26 @@ contract FlightSuretyData {
     /*                                       DATA VARIABLES                                     */
     /********************************************************************************************/
 
-    address private contractOwner;                                      // Account used to deploy contract
-    bool private operational = true;                                    // Blocks all state changes throughout the contract if false
+    address private contractOwner;    // Account used to deploy contract
+    bool private operational = true;  // Blocks all state changes throughout the contract if false
+
+    mapping(address => bool) private authorizedCallerList;      // list of authorized callers
+    mapping(address => Airline) private registeredAirlineList; // list of registered airlines
+
+    // Airline data contains the airline ID, name, funded state, and voting count
+    struct Airline {
+        address airlineID;
+        string name;
+        bool isFunded;
+    }
+
+    uint256 numberOfRegisteredAirlines = 0;     // number of registered airlines
+    uint256 totalFunds = 0;                     // total amount of funding available
+
+    // Passenger data
+    struct Passenger {
+
+    }
 
     /********************************************************************************************/
     /*                                       EVENT DEFINITIONS                                  */
@@ -61,6 +79,30 @@ contract FlightSuretyData {
     /********************************************************************************************/
 
     /**
+    * @dev Get registered airline count
+    *
+    * @return A bool that is the current operating status
+    */      
+    function getNumberOfRegisteredAirlines()
+                            external 
+                            view 
+                            returns(uint256) 
+    {
+        return numberOfRegisteredAirlines;
+    }
+
+    function isAirlineRegistered
+                                (
+                                    address airlineID
+                                )
+                                external
+                                view
+                                returns(bool)                           
+    {
+        return registeredAirlineList[airlineID].airlineID != address(0);
+    }
+    
+    /**
     * @dev Get operating status of contract
     *
     * @return A bool that is the current operating status
@@ -89,9 +131,24 @@ contract FlightSuretyData {
         operational = mode;
     }
 
+   
     /********************************************************************************************/
     /*                                     SMART CONTRACT FUNCTIONS                             */
     /********************************************************************************************/
+
+    /**
+    * @dev Sets authorized caller
+    *
+    * Set the address of the contracts allowed to call data
+    */    
+    function authorizeCaller
+                            (
+                                address contractID
+                            ) 
+                            public
+    {
+        authorizedCallerList[contractID] = true;
+    }
 
    /**
     * @dev Add an airline to the registration queue
@@ -100,10 +157,37 @@ contract FlightSuretyData {
     */   
     function registerAirline
                             (   
+                                address airlineID,
+                                string name
                             )
-                            external
-                            pure
+                            public
+                            requireIsOperational
     {
+        registeredAirlineList[airlineID] = Airline({
+            airlineID: airlineID,
+            name: name,
+            isFunded: false
+        });
+
+        numberOfRegisteredAirlines = numberOfRegisteredAirlines.add(1);
+    }
+
+    /**
+    * @dev Fund the airline
+    *
+    */ 
+    function fundAirline
+                        (
+                            address airlineID,
+                            uint256 amount
+                        )
+                        external
+                        payable
+                        requireIsOperational
+    {
+        registeredAirlineList[airlineID].isFunded = true;
+        totalFunds = totalFunds.add(amount);
+
     }
 
 

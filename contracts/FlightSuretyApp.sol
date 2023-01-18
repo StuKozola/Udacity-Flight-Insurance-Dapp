@@ -34,6 +34,8 @@ contract FlightSuretyApp {
     }
     mapping(bytes32 => Flight) private flights;
 
+    IFlightSuretyData private data;
+
  
     /********************************************************************************************/
     /*                                       FUNCTION MODIFIERS                                 */
@@ -50,7 +52,7 @@ contract FlightSuretyApp {
     modifier requireIsOperational() 
     {
          // Modify to call data contract's status
-        require(true, "Contract is currently not operational");  
+        require(data.isOperational(), "Contract is currently not operational");  
         _;  // All modifiers require an "_" which indicates where the function body will be added
     }
 
@@ -73,22 +75,37 @@ contract FlightSuretyApp {
     */
     constructor
                                 (
+                                    address contractID
                                 ) 
                                 public 
     {
         contractOwner = msg.sender;
+        data = IFlightSuretyData(contractID);
+        data.registerAirline(contractOwner, "Udacity Airlines");
     }
 
     /********************************************************************************************/
     /*                                       UTILITY FUNCTIONS                                  */
     /********************************************************************************************/
 
+    function isAirlineRegistered
+                                (
+                                    address airlineID
+                                )
+                                view
+                                external
+                                requireIsOperational
+                                returns(bool)
+    {
+        return data.isAirlineRegistered(airlineID);
+    }
+
     function isOperational() 
                             public 
-                            pure 
+                            view
                             returns(bool) 
     {
-        return true;  // Modify to call data contract's status
+        return data.isOperational();
     }
 
     /********************************************************************************************/
@@ -101,12 +118,24 @@ contract FlightSuretyApp {
     *
     */   
     function registerAirline
-                            (   
+                            (
+                                address airlineID,
+                                string name   
                             )
                             external
-                            pure
+                            requireIsOperational
                             returns(bool success, uint256 votes)
     {
+        // requirments
+        require(data.isAirlineRegistered(msg.sender), "Sender is not a registered airline");
+        require(!data.isAirlineRegistered(airlineID), "Airline is arleady registered");
+        require(data.isAirlineFunded(msg.sender), "Sender is not funded, airline can NOT be registered");
+
+        // test for the case where there are less the 5 registered airlines
+        if(data.getNumberOfRegisteredAirlines() < 4) {
+            data.registerAirline(airlineID, name);
+            return(success, 0);
+        }
         return (success, 0);
     }
 
@@ -334,4 +363,14 @@ contract FlightSuretyApp {
 
 // endregion
 
-}   
+}
+
+//interface function to FlightSuretyData
+contract IFlightSuretyData {
+    function fundAirline(address airlineID, uint256 amount) external payable;
+    function getNumberOfRegisteredAirlines() public view returns(uint256);
+    function isAirlineFunded(address airlineID) external view returns(bool);
+    function isAirlineRegistered(address airlineID) external view returns(bool);
+    function isOperational() public view returns(bool);
+    function registerAirline(address airlineID, string name) external;
+}
