@@ -7,7 +7,8 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"JuanBlanco.solidity"
+				"JuanBlanco.solidity",
+				"tintinweb.solidity-visual-auditor"
 			]
 		}
 	}
